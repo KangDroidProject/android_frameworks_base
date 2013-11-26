@@ -88,6 +88,9 @@
 
     <!-- Keyguard widget on the Navigation Bar for the application -->
     <uses-permission android:name="android.permission.SET_KEYGUARD_APPLICATION_WIDGET" />
+	
+    <!-- Halo -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
 
     <application
         android:persistent="true"
