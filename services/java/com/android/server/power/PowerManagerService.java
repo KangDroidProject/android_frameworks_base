@@ -72,6 +72,10 @@ import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Iterator;
+
 
 import libcore.util.Objects;
 
@@ -227,6 +231,9 @@ public final class PowerManagerService extends IPowerManager.Stub
 
     // Table of all wake locks acquired by applications.
     private final ArrayList<WakeLock> mWakeLocks = new ArrayList<WakeLock>();
+    private Set<String> mSeenWakeLocks = new HashSet<String>();
+    private Set<String> mBlockedWakeLocks = new HashSet<String>();
+    private int mWakeLockBlockingEnabled;
 
     // A bitfield that summarizes the state of all active wakelocks.
     private int mWakeLockSummary;
@@ -586,6 +593,12 @@ public final class PowerManagerService extends IPowerManager.Stub
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.PROXIMITY_ON_WAKE),
                     false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.KDP.getUriFor(
+                    Settings.KDP.WAKELOCK_BLOCKING_ENABLED),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.KDP.getUriFor(
+                    Settings.KDP.WAKELOCK_BLOCKING_LIST),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
 
             // Go.
             readConfigurationLocked();
@@ -646,6 +659,18 @@ public final class PowerManagerService extends IPowerManager.Stub
                 (mWakeUpWhenPluggedOrUnpluggedConfig ? 1 : 0));
         mProximityWakeEnabled = Settings.System.getInt(resolver,
                 Settings.System.PROXIMITY_ON_WAKE, 0) == 1;
+
+        mWakeLockBlockingEnabled = Settings.KDP.getIntForUser(resolver,
+                Settings.KDP.WAKELOCK_BLOCKING_ENABLED,
+                0, UserHandle.USER_CURRENT);
+
+        String blockedWakelockList = Settings.KDP.getStringForUser(resolver,
+                Settings.KDP.WAKELOCK_BLOCKING_LIST,
+                UserHandle.USER_CURRENT);
+        setBlockedWakeLocks(blockedWakelockList);
+
+        Slog.d(TAG, "mWakeLockBlockingEnabled=" + mWakeLockBlockingEnabled +
+                     " blockedWakelockList=" + blockedWakelockList);
 
         final int oldScreenBrightnessSetting = mScreenBrightnessSetting;
         mScreenBrightnessSetting = Settings.System.getIntForUser(resolver,
@@ -764,6 +789,18 @@ public final class PowerManagerService extends IPowerManager.Stub
                         + ", tag=\"" + tag + "\", ws=" + ws + ", uid=" + uid + ", pid=" + pid);
             }
 
+            boolean blockWakelock = false;
+
+            if (!mSeenWakeLocks.contains(tag)){
+                mSeenWakeLocks.add(tag);
+            }
+
+            if (mWakeLockBlockingEnabled == 1){
+                if (mBlockedWakeLocks.contains(tag)){
+                    blockWakelock = true;
+                }
+            }
+
             WakeLock wakeLock;
             int index = findWakeLockIndexLocked(lock);
             if (index >= 0) {
@@ -785,9 +822,18 @@ public final class PowerManagerService extends IPowerManager.Stub
                 mWakeLocks.add(wakeLock);
             }
 
-            applyWakeLockFlagsOnAcquireLocked(wakeLock);
-            mDirty |= DIRTY_WAKE_LOCKS;
-            updatePowerStateLocked();
+            wakeLock.setIsBlocked(blockWakelock);
+
+            if (!wakeLock.isBlocked()){
+                applyWakeLockFlagsOnAcquireLocked(wakeLock);
+                mDirty |= DIRTY_WAKE_LOCKS;
+                updatePowerStateLocked();
+            } else {
+                Slog.d(TAG, "acquireWakeLockInternal: blocked lock=" + Objects.hashCode(lock)
+                        + ", flags=0x" + Integer.toHexString(flags)
+                        + ", tag=\"" + tag + "\", ws=" + ws + ", uid=" + uid + ", pid=" + pid);
+
+            }
         }
     }
 
@@ -2947,6 +2993,7 @@ public final class PowerManagerService extends IPowerManager.Stub
         public final int mOwnerUid;
         public final int mOwnerPid;
         public boolean mNotifiedAcquired;
+	private boolean mIsBlocked;
 
         public WakeLock(IBinder lock, int flags, String tag, String packageName,
                 WorkSource workSource, int ownerUid, int ownerPid) {
@@ -3034,6 +3081,14 @@ public final class PowerManagerService extends IPowerManager.Stub
             }
             return result;
         }
+
+        public void setIsBlocked(boolean value){
+            mIsBlocked = value;
+        }
+
+        public boolean isBlocked(){
+            return mIsBlocked;
+        }
     }
 
     private final class SuspendBlockerImpl implements SuspendBlocker {
@@ -3092,6 +3147,31 @@ public final class PowerManagerService extends IPowerManager.Stub
         public String toString() {
             synchronized (this) {
                 return mName + ": ref count=" + mReferenceCount;
+            }
+        }
+    }
+
+    @Override
+    public String getSeenWakeLocks(){
+        StringBuffer buffer = new StringBuffer();
+        Iterator<String> nextWakeLock = mSeenWakeLocks.iterator();
+        while (nextWakeLock.hasNext()){
+            String wakeLockTag = nextWakeLock.next();
+            buffer.append(wakeLockTag + "|");
+        }
+        if(buffer.length()>0){
+            buffer.deleteCharAt(buffer.length() - 1);
+        }
+        return buffer.toString();
+    }
+
+    private void setBlockedWakeLocks(String wakeLockTagsString) {
+        mBlockedWakeLocks = new HashSet<String>();
+
+        if (wakeLockTagsString!=null && wakeLockTagsString.length()!=0){
+            String[] parts = wakeLockTagsString.split("\\|");
+            for(int i = 0; i < parts.length; i++){
+                mBlockedWakeLocks.add(parts[i]);
             }
         }
     }
