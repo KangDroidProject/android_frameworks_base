@@ -4047,6 +4047,19 @@ public final class Settings {
         public static final String WIFI_WATCHDOG_PING_TIMEOUT_MS =
             Secure.WIFI_WATCHDOG_PING_TIMEOUT_MS;
 
+         /**
+          * Animate-flip Quick Settings Panel Tiles on click
+          *
+          * @hide
+          */
+         public static final String QUICK_SETTINGS_TILES_FLIP = "quick_settings_tiles_flip";
+
+         /**
+          * Allows to show the background activity back the lockscreen
+          * @hide
+          */
+         public static final String LOCKSCREEN_SEE_THROUGH = "lockscreen_see_through";
+
         /**
          * boolean value. toggles using arrow key locations on nav bar
          * as left and right dpad keys
