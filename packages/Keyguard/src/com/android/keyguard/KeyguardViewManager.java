@@ -1023,7 +1023,7 @@ public class KeyguardViewManager {
                 Slog.w(TAG, "Exception calling onShown():", e);
             }
         }
-         if (mLockscreenNotifications) {
+         if (mLockscreenNotifications && mKeyguardView != null) {
              mNotificationViewManager.onScreenTurnedOn();
          }
     }
