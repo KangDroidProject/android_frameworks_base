@@ -8221,18 +8221,6 @@ public final class Settings {
             Settings.Global.putString(context.getContentResolver(), prefKey, name);
         }
 
-         /**
-         * Enable blocking wakelock
-         * @hide
-         */
-        public static final String WAKELOCK_BLOCKING_ENABLED = "wakelock_blocking_enabled";
-
-        /**
-         * List of wakelock blocks selected
-         * @hide
-         */
-        public static final String WAKELOCK_BLOCKING_LIST = "wakelock_blocking_list";
-
     }
 
 
@@ -8615,11 +8603,16 @@ public final class Settings {
         }
 
         /**
-         * whether to hide the Ram Usage Bar on recent switcher
-         *
-         *@hide
-         */
-        public static final String RAM_USAGE_BAR = "ram_usage_bar";
+        * Enable blocking wakelock
+        * @hide
+        */
+       public static final String WAKELOCK_BLOCKING_ENABLED = "wakelock_blocking_enabled";
+
+       /**
+        * List of wakelock blocks selected
+        * @hide
+        */
+       public static final String WAKELOCK_BLOCKING_LIST = "wakelock_blocking_list";
 
     }
 //end of KDP Settings
