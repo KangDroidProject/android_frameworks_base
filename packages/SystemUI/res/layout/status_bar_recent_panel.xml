@@ -52,7 +52,7 @@
                 android:orientation="horizontal">
             </LinearLayout>
 
-        </com.android.systemui.recent.RecentsVerticalScrollView>
+        </com.android.systemui.recent.RecentsHorizontalScrollView>
 
         <LinearLayout
             android:layout_width="wrap_content"
